@@ -1,0 +1,77 @@
+openapi: 3.1.0
+info:
+  title: Dashboard Grupo Roma API
+  version: "1.0.0"
+  description: API lectora del dashboard interno de Grupo Roma. Extrae información real del HTML publicado y la devuelve estructurada.
+servers:
+  - url: https://TU-DOMINIO-DE-LA-API.com
+    description: Reemplazar por el dominio real donde publiques esta API
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+security:
+  - ApiKeyAuth: []
+paths:
+  /api/resumen:
+    get:
+      operationId: obtenerResumenDashboard
+      summary: Obtener resumen general del dashboard
+      responses:
+        "200":
+          description: Resumen general de barrios y urgencias
+  /api/barrios:
+    get:
+      operationId: listarBarrios
+      summary: Listar barrios/proyectos del dashboard
+      responses:
+        "200":
+          description: Lista de barrios
+  /api/barrios/{id}/cliente:
+    get:
+      operationId: obtenerBarrioParaCliente
+      summary: Obtener datos de un barrio filtrados para respuesta a cliente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID o nombre del barrio. Ejemplos VI, Vitta, CM, Campo Madero.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Datos del barrio filtrados para audiencia cliente
+        "404":
+          description: Barrio no encontrado
+  /api/barrios/{id}:
+    get:
+      operationId: obtenerBarrioCompleto
+      summary: Obtener datos completos internos de un barrio
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID o nombre del barrio
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Datos completos del barrio
+        "404":
+          description: Barrio no encontrado
+  /api/postventa/modelos:
+    get:
+      operationId: obtenerModelosPostventa
+      summary: Obtener modelos de respuesta de postventa
+      parameters:
+        - name: barrio
+          in: query
+          required: false
+          description: Filtrar por barrio o ID. Ejemplos VI, CM, CEPE.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Modelos de respuesta disponibles
