@@ -6,7 +6,8 @@ const DEFAULT_VARS = [
   "MODELOS",
   "ESTRATEGIA",
   "CLIENTES",
-  "CHECKLIST"
+  "CHECKLIST",
+  "NOVEDADES"
 ];
 
 export async function fetchDashboardHtml(url) {
