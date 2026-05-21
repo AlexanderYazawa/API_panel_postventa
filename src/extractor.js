@@ -20,7 +20,65 @@ export async function fetchDashboardHtml(url) {
     throw new Error(`No se pudo leer el dashboard. HTTP ${res.status}`);
   }
 
-  return await res.text();
+  const html = await res.text();
+
+  // Compatibilidad:
+  // 1) Dashboard viejo: datos embebidos dentro del index.html.
+  // 2) Dashboard nuevo: datos separados en archivos JS externos, por ejemplo /data/proyectos.js.
+  //
+  // Para no cambiar server.js, devolvemos el HTML + el contenido de los scripts externos
+  // como texto adicional. Luego extractDashboardData puede encontrar las mismas constantes.
+  const externalScripts = await fetchExternalScripts(html, url);
+
+  if (!externalScripts.length) {
+    return html;
+  }
+
+  return `${html}\n\n<!-- EXTERNAL DATA SCRIPTS INLINED FOR API EXTRACTION -->\n${externalScripts
+    .map((script) => `<script>\n${script}\n</script>`)
+    .join("\n")}`;
+}
+
+async function fetchExternalScripts(html, baseUrl) {
+  const scripts = [];
+  const regex = /<script\s+[^>]*src=["']([^"']+)["'][^>]*>\s*<\/script>/gi;
+  const matches = [...html.matchAll(regex)];
+
+  for (const match of matches) {
+    const src = match[1];
+
+    // Leemos solo JS relativo/same-origin. Evitamos CDNs o scripts externos.
+    const resolved = new URL(src, baseUrl);
+    const base = new URL(baseUrl);
+
+    if (resolved.origin !== base.origin) continue;
+    if (!resolved.pathname.endsWith(".js")) continue;
+
+    try {
+      const res = await fetch(resolved.href, {
+        headers: {
+          "user-agent": "GrupoRomaDashboardExtractor/1.0"
+        }
+      });
+
+      if (!res.ok) continue;
+
+      const js = await res.text();
+
+      // Optimización: solo agregamos scripts que parezcan contener datos del dashboard.
+      if (
+        DEFAULT_VARS.some((name) => js.includes(`const ${name}`)) ||
+        resolved.pathname.includes("/data/")
+      ) {
+        scripts.push(js);
+      }
+    } catch {
+      // Si un script externo falla, no rompemos todo: el extractor intentará con lo que tenga.
+      continue;
+    }
+  }
+
+  return scripts;
 }
 
 function findConstExpression(source, name) {
@@ -145,7 +203,7 @@ export function extractDashboardData(html, variables = DEFAULT_VARS) {
   }
 
   return {
-    source_type: "html_embedded_javascript",
+    source_type: "html_embedded_or_external_javascript",
     extracted_at: new Date().toISOString(),
     variables_found: found,
     data
