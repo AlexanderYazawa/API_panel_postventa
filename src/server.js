@@ -74,6 +74,7 @@ app.get("/", (req, res) => {
       "GET /api/barrios/:id",
       "GET /api/barrios/:id/cliente",
       "GET /api/postventa/modelos",
+      "GET /api/novedades",
       "GET /api/raw"
     ]
   });
@@ -223,6 +224,53 @@ app.get("/api/postventa/modelos", requireApiKey, async (req, res) => {
       extraido_en: d.extracted_at,
       barrio: barrio || "todos",
       modelos
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/novedades", requireApiKey, async (req, res) => {
+  try {
+    const d = await getDashboard();
+    let novedades = d.data.NOVEDADES || [];
+
+    const barrio = req.query.barrio;
+    const visibilidad = req.query.visibilidad;
+    const marketing = req.query.marketing;
+    const postventa = req.query.postventa;
+
+    if (barrio) {
+      const q = String(barrio).toLowerCase();
+      novedades = novedades.filter((n) =>
+        String(n.barrio_id || "").toLowerCase() === q ||
+        String(n.barrio || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (visibilidad) {
+      novedades = novedades.filter((n) =>
+        String(n.visibilidad || "") === String(visibilidad)
+      );
+    }
+
+    if (marketing === "true") {
+      novedades = novedades.filter((n) => n.apto_marketing === true);
+    }
+
+    if (postventa === "true") {
+      novedades = novedades.filter((n) => n.apto_postventa === true);
+    }
+
+    novedades = novedades.sort((a, b) =>
+      String(b.fecha || "").localeCompare(String(a.fecha || ""))
+    );
+
+    res.json({
+      fuente: d.dashboard_url,
+      extraido_en: d.extracted_at,
+      total: novedades.length,
+      novedades
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
