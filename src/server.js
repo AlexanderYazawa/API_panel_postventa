@@ -15,6 +15,12 @@ const PORT = process.env.PORT || 3000;
 const DASHBOARD_URL =
   process.env.DASHBOARD_URL || "https://marianottzz.github.io/dashboardgeneral/";
 const API_KEY = process.env.API_KEY || "";
+const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
+const GITHUB_REPO = process.env.GITHUB_REPO || "";
+const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main";
+const GITHUB_NOVEDADES_PATH = process.env.GITHUB_NOVEDADES_PATH || "data/novedades.js";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
+const ADMIN_WRITE_KEY = process.env.ADMIN_WRITE_KEY || "";
 
 let cache = {
   fetchedAt: 0,
@@ -38,6 +44,29 @@ function requireApiKey(req, res, next) {
 
   next();
 }
+
+function requireAdminWriteKey(req, res, next) {
+  const provided =
+    req.headers["x-admin-key"] ||
+    req.body?.admin_key ||
+    req.query.admin_key;
+
+  if (!ADMIN_WRITE_KEY) {
+    return res.status(500).json({
+      error: "ADMIN_WRITE_KEY no configurada en Render."
+    });
+  }
+
+  if (provided !== ADMIN_WRITE_KEY) {
+    return res.status(401).json({
+      error: "No autorizado",
+      detail: "Falta x-admin-key o la clave de carga no coincide."
+    });
+  }
+
+  next();
+}
+
 
 async function getDashboard() {
   const now = Date.now();
@@ -94,7 +123,7 @@ app.get("/health", async (req, res) => {
   }
 });
 
-app.get("/api/resumen", requireApiKey, async (req, res) => {
+app.get("/api/resumen", , async (req, res) => {
   try {
     const d = await getDashboard();
     const projects = d.data.PROJS || [];
